@@ -45,7 +45,10 @@ jobs:
 
       - name: Verify APatch config flags
         run: |
-          grep -E 'CONFIG_KALLSYMS(|_ALL)=y' out/.config
+          # APatch/KernelPatch requires these to resolve kernel symbols
+          grep -E 'CONFIG_KALLSYMS=y' out/.config
+          grep -E 'CONFIG_KALLSYMS_ALL=y' out/.config
+          grep -E 'CONFIG_KALLSYMS_BASE_RELATIVE=y' out/.config
 
       - name: Upload flashable zip
         if: success()
