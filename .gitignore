@@ -75,6 +75,11 @@ modules.builtin
 !.gitignore
 !.mailmap
 !.cocciconfig
+!.github/
+!.github/**
+
+# GitHub Actions toolchain cache (workflow downloads toolchains into the repo dir)
+/toolchains/
 
 #
 # Generated include files
