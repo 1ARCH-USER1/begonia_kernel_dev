@@ -118,6 +118,8 @@ build_kernel() {
     make O="$OUT_DIR" ARCH="$ARCH" CC="$CC" \
         CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" \
         $EXTRA_FLAGS "$DEFCONFIG"
+    # Fix: force-disable STRICT_KERNEL_RWX which make defconfig won't handle
+    sed -i 's/CONFIG_STRICT_KERNEL_RWX=y/CONFIG_STRICT_KERNEL_RWX=n/' "$OUT_DIR/.config" 2>/dev/null || true
     prepare_config
     make O="$OUT_DIR" ARCH="$ARCH" CC="$CC" \
         CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" \
