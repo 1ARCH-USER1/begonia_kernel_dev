@@ -45,10 +45,17 @@ jobs:
 
       - name: Verify APatch config flags
         run: |
-          # APatch/KernelPatch requires these to resolve kernel symbols
+          # APatch/KernelPatch requires these to resolve kernel symbols.
+          # Verify BOTH the pre-build .config AND the config embedded in the
+          # final Image, because olddefconfig can silently drop them from the
+          # built kernel even when present in out/.config.
           grep -E 'CONFIG_KALLSYMS=y' out/.config
           grep -E 'CONFIG_KALLSYMS_ALL=y' out/.config
           grep -E 'CONFIG_KALLSYMS_BASE_RELATIVE=y' out/.config
+          scripts/extract-ikconfig out/arch/arm64/boot/Image \
+            | grep -E 'CONFIG_KALLSYMS_ALL=y'
+          scripts/extract-ikconfig out/arch/arm64/boot/Image \
+            | grep -E 'CONFIG_KALLSYMS_BASE_RELATIVE=y'
 
       - name: Upload flashable zip
         if: success()
