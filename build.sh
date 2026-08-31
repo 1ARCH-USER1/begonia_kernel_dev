@@ -118,9 +118,20 @@ build_kernel() {
     make O="$OUT_DIR" ARCH="$ARCH" CC="$CC" \
         CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" \
         $EXTRA_FLAGS "$DEFCONFIG"
-    # Fix: force-disable STRICT_KERNEL_RWX which make defconfig won't handle
-    sed -i 's/CONFIG_STRICT_KERNEL_RWX=y/CONFIG_STRICT_KERNEL_RWX=n/' "$OUT_DIR/.config" 2>/dev/null || true
     prepare_config
+    # KernelPatch (APatch) requires full kallsyms to resolve KASLR-displaced
+    # symbols. olddefconfig can silently drop these; force them on before the
+    # final build and abort if they do not stick.
+    ./scripts/config --file "$OUT_DIR/.config" --enable DEBUG_KERNEL --enable KALLSYMS --enable KALLSYMS_ALL --enable KALLSYMS_BASE_RELATIVE
+    make O="$OUT_DIR" ARCH="$ARCH" CC="$CC" \
+        CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" \
+        $EXTRA_FLAGS olddefconfig
+    for _sym in KALLSYMS KALLSYMS_ALL KALLSYMS_BASE_RELATIVE; do
+        grep -q "^CONFIG_${_sym}=y\$" "$OUT_DIR/.config" || {
+            echo "ERROR: CONFIG_${_sym} is not y in $OUT_DIR/.config (KernelPatch will fail)" >&2
+            exit 1
+        }
+    done
     make O="$OUT_DIR" ARCH="$ARCH" CC="$CC" \
         CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" \
         $EXTRA_FLAGS -j"$JOBS"
