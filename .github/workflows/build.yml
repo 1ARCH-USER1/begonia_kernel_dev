@@ -47,15 +47,24 @@ jobs:
         run: |
           # APatch/KernelPatch requires these to resolve kernel symbols.
           # Verify BOTH the pre-build .config AND the config embedded in the
-          # final Image, because olddefconfig can silently drop them from the
-          # built kernel even when present in out/.config.
+          # final Image, because the built kernel can differ from out/.config.
           grep -E 'CONFIG_KALLSYMS=y' out/.config
           grep -E 'CONFIG_KALLSYMS_ALL=y' out/.config
           grep -E 'CONFIG_KALLSYMS_BASE_RELATIVE=y' out/.config
-          scripts/extract-ikconfig out/arch/arm64/boot/Image \
-            | grep -E 'CONFIG_KALLSYMS_ALL=y'
-          scripts/extract-ikconfig out/arch/arm64/boot/Image \
-            | grep -E 'CONFIG_KALLSYMS_BASE_RELATIVE=y'
+          python3 - <<'EOF'
+          import gzip, re, sys
+          img = "out/arch/arm64/boot/Image"
+          data = open(img, "rb").read()
+          st = data.find(b"IKCFG_ST")
+          ed = data.find(b"IKCFG_ED")
+          if st < 0 or ed < 0 or ed <= st:
+              sys.exit("ERROR: no embedded IKCONFIG found in %s" % img)
+          cfg = gzip.decompress(data[st+8:ed]).decode()
+          for sym in ("CONFIG_KALLSYMS", "CONFIG_KALLSYMS_ALL", "CONFIG_KALLSYMS_BASE_RELATIVE"):
+              if ("%s=y" % sym) not in cfg:
+                  sys.exit("ERROR: %s is not y in embedded Image config" % sym)
+          print("verified embedded Image config: KALLSYMS_ALL=y KALLSYMS_BASE_RELATIVE=y")
+          EOF
 
       - name: Upload flashable zip
         if: success()
